@@ -142,7 +142,7 @@ function updateBarChart(data) {
                 selectedAgeGroup = clickedAgeGroup;
                 updateHeatmap({ ageGroup: clickedAgeGroup }, data);
                 d3.selectAll(".bar").attr("fill", "#42a5f5"); // Reset other bars
-                d3.select(event.target).attr("fill", "#ff7043"); // Highlight selected bar
+                d3.select(event.target).attr("fill", "#1e3a5f"); // Highlight selected bar
             }
         });
 
