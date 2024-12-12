@@ -11,6 +11,8 @@ const tooltip = d3.select("body")
     .style("font-size", "12px")
     .style("visibility", "hidden");
 
+let selectedRace = null; // Track the selected race
+
 function updatePieChart(data) {
     const raceCounts = d3.rollups(
         data,
@@ -41,13 +43,27 @@ function updatePieChart(data) {
         .on("mouseover", (event, d) => {
             const percentage = ((d.data[1] / total) * 100).toFixed(2);
             tooltip.style("visibility", "visible")
-                   .text(`${d.data[0]}: ${d.data[1]} (${percentage}%)`);
+                .text(`${d.data[0]}: ${d.data[1]} (${percentage}%)`);
         })
         .on("mousemove", (event) => {
             tooltip.style("top", (event.pageY + 10) + "px")
-                   .style("left", (event.pageX + 10) + "px");
+                .style("left", (event.pageX + 10) + "px");
         })
-        .on("mouseout", () => tooltip.style("visibility", "hidden"));
+        .on("mouseout", () => tooltip.style("visibility", "hidden"))
+        .on("click", (event, d) => {
+            // Toggle selection
+            const clickedRace = d.data[0];
+            if (selectedRace === clickedRace) {
+                selectedRace = null; // Deselect if already selected
+                updateHeatmap({}, data);
+                d3.selectAll("path").attr("fill", d => color(d.data[0])); // Reset colors
+            } else {
+                selectedRace = clickedRace;
+                updateHeatmap({ race: clickedRace }, data);
+                d3.selectAll("path").attr("fill", d => color(d.data[0])); // Reset colors
+                d3.select(event.target).attr("fill", d3.color(color(clickedRace)).darker(1)); // Darken selected slice
+            }
+        });
 
     // Add legend
     const legend = d3.select("#pieChart")
@@ -74,6 +90,7 @@ function updatePieChart(data) {
         .style("font-size", "14px")
         .style("fill", "#333");
 }
+
 
 let selectedAgeGroup = null; // Track the selected age group
 
@@ -161,7 +178,8 @@ function updateBarChart(data) {
 
 function updateHeatmap(filter = {}, data = []) {
     const filteredData = data.filter(d => {
-        return (!filter.ageGroup || d.age_group === filter.ageGroup);
+        return (!filter.race || d.race_ethnicity_combined === filter.race) &&
+               (!filter.ageGroup || d.age_group === filter.ageGroup);
     });
 
     const heatmapData = d3.rollup(
@@ -212,11 +230,11 @@ function updateHeatmap(filter = {}, data = []) {
         .attr("fill", d => color(d.count))
         .on("mouseover", (event, d) => {
             tooltip.style("visibility", "visible")
-                   .text(`${d.ageGroup} - ${d.race}: ${d.count}`);
+                .text(`${d.ageGroup} - ${d.race}: ${d.count}`);
         })
         .on("mousemove", (event) => {
             tooltip.style("top", (event.pageY + 10) + "px")
-                   .style("left", (event.pageX + 10) + "px");
+                .style("left", (event.pageX + 10) + "px");
         })
         .on("mouseout", () => tooltip.style("visibility", "hidden"));
 
