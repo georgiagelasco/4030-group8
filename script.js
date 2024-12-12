@@ -75,6 +75,8 @@ function updatePieChart(data) {
         .style("fill", "#333");
 }
 
+let selectedAgeGroup = null; // Track the selected age group
+
 function updateBarChart(data) {
     const ageCounts = d3.rollups(
         data,
@@ -103,9 +105,6 @@ function updateBarChart(data) {
         .append("g")
         .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
-    // Track selected bar for toggling
-    let selectedBar = null;
-
     svg.selectAll(".bar")
         .data(ageCounts)
         .enter()
@@ -115,28 +114,35 @@ function updateBarChart(data) {
         .attr("width", x.bandwidth())
         .attr("height", d => height - y(d[1]))
         .attr("fill", "#42a5f5")
-        .style("cursor", "pointer")
+        .style("transition", "0.3s")
         .on("mouseover", (event, d) => {
             const percentage = ((d[1] / total) * 100).toFixed(2);
             tooltip.style("visibility", "visible")
                    .text(`${d[0]}: ${d[1]} (${percentage}%)`);
+            d3.select(event.target).attr("fill", "#1e88e5");
         })
         .on("mousemove", (event) => {
             tooltip.style("top", (event.pageY + 10) + "px")
                    .style("left", (event.pageX + 10) + "px");
         })
-        .on("mouseout", () => tooltip.style("visibility", "hidden"))
+        .on("mouseout", (event) => {
+            tooltip.style("visibility", "hidden");
+            if (selectedAgeGroup !== event.target.__data__[0]) {
+                d3.select(event.target).attr("fill", "#42a5f5");
+            }
+        })
         .on("click", (event, d) => {
             // Toggle selection
-            if (selectedBar === d[0]) {
-                selectedBar = null;
-                d3.selectAll(".bar").attr("fill", "#42a5f5");
-                updateHeatmap({}, data); // Reset heatmap
+            const clickedAgeGroup = d[0];
+            if (selectedAgeGroup === clickedAgeGroup) {
+                selectedAgeGroup = null; // Deselect if already selected
+                updateHeatmap({}, data);
+                d3.select(event.target).attr("fill", "#42a5f5");
             } else {
-                selectedBar = d[0];
-                d3.selectAll(".bar").attr("fill", "#42a5f5"); // Reset all bars
-                d3.select(event.target).attr("fill", "#1e88e5"); // Highlight selected bar
-                updateHeatmap({ ageGroup: d[0] }, data); // Filter heatmap
+                selectedAgeGroup = clickedAgeGroup;
+                updateHeatmap({ ageGroup: clickedAgeGroup }, data);
+                d3.selectAll(".bar").attr("fill", "#42a5f5"); // Reset other bars
+                d3.select(event.target).attr("fill", "#ff7043"); // Highlight selected bar
             }
         });
 
@@ -189,11 +195,10 @@ function updateHeatmap(filter = {}, data = []) {
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom);
 
-    // Clear existing heatmap
+    // Clear the heatmap and re-render
     svg.selectAll("*").remove();
 
-    const heatmapGroup = svg.append("g")
-        .attr("transform", `translate(${margin.left}, ${margin.top})`);
+    const heatmapGroup = svg.append("g").attr("transform", `translate(${margin.left}, ${margin.top})`);
 
     heatmapGroup.selectAll(".heatmap-rect")
         .data([...heatmapData.entries()].flatMap(([ageGroup, raceData]) =>
@@ -215,7 +220,6 @@ function updateHeatmap(filter = {}, data = []) {
         })
         .on("mouseout", () => tooltip.style("visibility", "hidden"));
 
-    // Add x-axis
     heatmapGroup.append("g")
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x))
@@ -224,7 +228,6 @@ function updateHeatmap(filter = {}, data = []) {
         .style("text-anchor", "end")
         .style("font-size", "12px");
 
-    // Add y-axis
     heatmapGroup.append("g")
         .call(d3.axisLeft(y))
         .style("font-size", "12px");
