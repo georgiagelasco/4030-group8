@@ -1,123 +1,118 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Covid-19 Data Visualization</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
-      body {
-        background-color: #ADD8E6;
-        font-family: 'Roboto', sans-serif;
-        color: #333;
-        text-align: center;
-        margin: 0;
-        padding: 0;
-      }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to bottom, #f5f7fa, #c3cfe2);
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-      h1 {
-        margin: 20px 0;
-        font-size: 2em;
-        color: #222;
-      }
+        h1 {
+            font-size: 2.8rem;
+            margin-top: 20px;
+            color: #4a148c;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
 
-      .button-container {
-        margin-bottom: 20px;
-      }
+        h2 {
+            font-size: 1.8rem;
+            color: #6a1b9a;
+            margin-bottom: 10px;
+        }
 
-      button {
-        padding: 10px 20px;
-        margin: 5px;
-        border: none;
-        background-color: #007BFF;
-        color: white;
-        font-size: 1em;
-        cursor: pointer;
-        border-radius: 5px;
-        transition: background-color 0.3s;
-      }
+        #chartsContainer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px;
+            gap: 30px;
+            width: 90%;
+        }
 
-      button:hover {
-        background-color: #0056b3;
-      }
+        .chart {
+            background: linear-gradient(to bottom, #ffffff, #f0f0f0);
+            border-radius: 12px;
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            text-align: center;
+            flex: 1 1 300px;
+        }
 
-      button.active-button {
-        background-color: #4CAF50;
-        color: white;
-      }
+        svg {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
 
-      .charts-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        padding: 20px;
-      }
+        footer {
+            margin-top: 20px;
+            padding: 15px;
+            background: #4a148c;
+            color: white;
+            text-align: center;
+            width: 100%;
+            font-size: 1rem;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+        }
 
-      .chart-container {
-        background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-      }
-
-      svg {
-        width: 100%;
-        height: auto;
-      }
-
-      #attribute-buttons-container {
-        margin: 20px;
-      }
-
-      #attribute-buttons-container button {
-        margin: 0 10px;
-      }
+        .tooltip {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ddd;
+            padding: 8px 10px;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+            visibility: hidden;
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <h1>Covid-19 Data Visualization</h1>
 
-    <div class="button-container">
-      <button onclick="updateAttribute('sex')">Sex</button>
-      <button onclick="updateAttribute('age_group')">Age Group</button>
-      <button onclick="updateAttribute('race_ethnicity_combined')">Race/Ethnicity</button>
-      <button onclick="updateAttribute('hosp_yn')">Hospitalized</button>
-      <button onclick="updateAttribute('icu_yn')">ICU</button>
-      <button onclick="updateAttribute('death_yn')">Death</button>
-      <button onclick="updateAttribute('medcond_yn')">Medical Condition</button>
+    <div id="chartsContainer">
+        <div id="pieChartContainer" class="chart">
+ 
+            <svg id="pieChart" width="400" height="400"></svg>
+        </div>
+
+        <div id="barChartContainer" class="chart">
+           
+            <svg id="barChart" width="500" height="300"></svg>
+        </div>
+
+        <div id="heatmapContainer" class="chart">
+            <svg id="heatmap" width="600" height="400"></svg>
+        </div>
     </div>
 
-    <!-- Charts -->
-    <div class="charts-container">
-      <div class="chart-container" id="piechart-container">
-        <h3>Pie Chart</h3>
-        <svg id="piechart"></svg>
-      </div>
-      <div class="chart-container" id="barchart-container">
-        <h3>Bar Chart</h3>
-        <svg id="barchart"></svg>
-      </div>
-    </div>
-
-    <div class="chart-container" id="heatmap-container">
-      <h3>Heatmap</h3>
-      <svg id="heatmap"></svg>
-    </div>
+    <footer>
+        Data Visualization by Stephen Martin, Georgia Gelasco
+    </footer>
 
     <script>
-      function updateAttribute(attribute) {
-        console.log(`Attribute selected: ${attribute}`);
-        // You can update the charts with the selected attribute as needed.
-        updatePieChart(attribute);
-        updateBarChart(attribute);
-        updateHeatmap();
-      }
-      
-      // All charts are visible by default; no need for specific show/hide functions
+        // Load the CSV and then call update functions
+        d3.csv("covid.csv").then(data => {
+            updatePieChart(data);
+            updateBarChart(data);
+            updateHeatmap({}, data);
+        }).catch(error => {
+            console.error("Error loading CSV data:", error);
+        });
     </script>
 
     <script src="script.js"></script>
-  </body>
+</body>
 </html>
