@@ -201,7 +201,7 @@ function updateHeatmap(filter = {}, data = []) {
     const ageGroups = Array.from(new Set(data.map(d => d.age_group)));
     const races = Array.from(new Set(data.map(d => d.race_ethnicity_combined)));
 
-    const margin = { top: 30, right: 100, bottom: 100, left: 300 };
+    const margin = { top: 30, right: 60, bottom: 100, left: 300 };
     const width = 500;
     const height = 500;
 
@@ -215,8 +215,12 @@ function updateHeatmap(filter = {}, data = []) {
         .range([0, height])
         .padding(0.05);
 
-    const maxCount = d3.max(heatmapData.values(), d => d3.max(d.values()));
-    const color = d3.scaleSequential(d3.interpolateViridis).domain([0, maxCount]);
+    const maxCount = d3.max(
+        Array.from(heatmapData.values()).flatMap(d => Array.from(d.values()))
+    );
+
+    const color = d3.scaleSequential(d3.interpolateViridis)
+        .domain([0, maxCount]);
 
     const svg = d3.select("#heatmap")
         .attr("width", width + margin.left + margin.right)
@@ -260,23 +264,28 @@ function updateHeatmap(filter = {}, data = []) {
         .style("font-size", "12px");
 
     // Add Legend
-    const legendWidth = 300, legendHeight = 20;
+    const legendHeight = 300, legendWidth = 20;
 
     const legendGroup = svg.append("g")
         .attr("transform", `translate(${margin.left + width + 20}, ${margin.top})`);
 
     const legendScale = d3.scaleLinear()
         .domain([0, maxCount])
-        .range([0, legendWidth]);
+        .range([legendHeight, 0]);
 
-    const legendAxis = d3.axisBottom(legendScale)
+    const legendAxis = d3.axisRight(legendScale)
         .ticks(5)
         .tickFormat(d3.format(".0f"));
 
     // Create gradient
     const defs = svg.append("defs");
     const linearGradient = defs.append("linearGradient")
-        .attr("id", "heatmap-gradient");
+        .attr("id", "heatmap-gradient")
+        .attr("gradientUnits", "userSpaceOnUse")
+        .attr("x1", "0%")
+        .attr("y1", "100%")
+        .attr("x2", "0%")
+        .attr("y2", "0%");
 
     linearGradient.selectAll("stop")
         .data(color.ticks(10).map((t, i, arr) => ({
@@ -297,8 +306,9 @@ function updateHeatmap(filter = {}, data = []) {
         .style("fill", "url(#heatmap-gradient)");
 
     legendGroup.append("g")
-        .attr("transform", `translate(0, ${legendHeight})`)
+        .attr("transform", `translate(${legendWidth}, 0)`)
         .call(legendAxis)
         .style("font-size", "12px");
 }
+
 
