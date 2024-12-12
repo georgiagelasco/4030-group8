@@ -1,11 +1,16 @@
-// Global filter object to store the current selection
-let filter = {};
+// Add a styled tooltip element
+const tooltip = d3.select("body")
+    .append("div")
+    .attr("class", "tooltip")
+    .style("position", "absolute")
+    .style("background-color", "rgba(0, 0, 0, 0.7)")
+    .style("color", "white")
+    .style("padding", "10px")
+    .style("border-radius", "5px")
+    .style("box-shadow", "0px 2px 5px rgba(0, 0, 0, 0.5)")
+    .style("font-size", "12px")
+    .style("visibility", "hidden");
 
-// Tooltip setup
-const tooltip = d3.select("body").append("div")
-    .attr("class", "tooltip");
-
-// Update the pie chart to include click events
 function updatePieChart(data) {
     const raceCounts = d3.rollups(
         data,
@@ -15,11 +20,10 @@ function updatePieChart(data) {
 
     const total = d3.sum(raceCounts, d => d[1]);
     const radius = 150;
-    const color = d3.scaleOrdinal(d3.schemeSet3);
-
+    const color = d3.scaleOrdinal(d3.schemeSet3); // Updated color palette
     const svg = d3.select("#pieChart")
         .attr("width", 400)
-        .attr("height", 400)
+        .attr("height", 600)
         .append("g")
         .attr("transform", `translate(${radius}, ${radius})`);
 
@@ -43,14 +47,34 @@ function updatePieChart(data) {
             tooltip.style("top", (event.pageY + 10) + "px")
                    .style("left", (event.pageX + 10) + "px");
         })
-        .on("mouseout", () => tooltip.style("visibility", "hidden"))
-        .on("click", (event, d) => {
-            filter.race = d.data[0]; // Update the race filter
-            updateHeatmap(filter, data); // Update the heatmap with the filter
-        });
+        .on("mouseout", () => tooltip.style("visibility", "hidden"));
+
+    // Add legend
+    const legend = d3.select("#pieChart")
+        .append("g")
+        .attr("transform", `translate(10, ${2 * radius + 20})`);
+
+    legend.selectAll("rect")
+        .data(raceCounts)
+        .enter()
+        .append("rect")
+        .attr("x", 0)
+        .attr("y", (d, i) => i * 25)
+        .attr("width", 15)
+        .attr("height", 15)
+        .attr("fill", d => color(d[0]));
+
+    legend.selectAll("text")
+        .data(raceCounts)
+        .enter()
+        .append("text")
+        .attr("x", 20)
+        .attr("y", (d, i) => i * 25 + 12)
+        .text(d => d[0])
+        .style("font-size", "14px")
+        .style("fill", "#333");
 }
 
-// Update the bar chart to include click events
 function updateBarChart(data) {
     const ageCounts = d3.rollups(
         data,
@@ -102,10 +126,6 @@ function updateBarChart(data) {
         .on("mouseout", (event) => {
             tooltip.style("visibility", "hidden");
             d3.select(event.target).attr("fill", "#42a5f5");
-        })
-        .on("click", (event, d) => {
-            filter.ageGroup = d[0]; // Update the age group filter
-            updateHeatmap(filter, data); // Update the heatmap with the filter
         });
 
     svg.append("g")
@@ -119,9 +139,10 @@ function updateBarChart(data) {
     svg.append("g")
         .call(d3.axisLeft(y).ticks(6))
         .style("font-size", "12px");
+
+
 }
 
-// Update the heatmap to use the filter
 function updateHeatmap(filter = {}, data = []) {
     const filteredData = data.filter(d => {
         return (!filter.race || d.race_ethnicity_combined === filter.race) &&
@@ -135,15 +156,63 @@ function updateHeatmap(filter = {}, data = []) {
         d => d.race_ethnicity_combined
     );
 
-    // Your existing heatmap implementation should be updated here.
-    // Clear and re-render the heatmap based on filtered data.
-}
+    const ageGroups = Array.from(new Set(data.map(d => d.age_group)));
+    const races = Array.from(new Set(data.map(d => d.race_ethnicity_combined)));
 
-// Load the CSV and then call update functions
-d3.csv("covid.csv").then(data => {
-    updatePieChart(data);
-    updateBarChart(data);
-    updateHeatmap({}, data);
-}).catch(error => {
-    console.error("Error loading CSV data:", error);
-});
+    const margin = { top: 30, right: 20, bottom: 100, left: 300 };
+    const width = 500;
+    const height = 500;
+
+    const x = d3.scaleBand()
+        .domain(ageGroups)
+        .range([0, width])
+        .padding(0.05);
+
+    const y = d3.scaleBand()
+        .domain(races)
+        .range([0, height])
+        .padding(0.05);
+
+    const color = d3.scaleSequential(d3.interpolateViridis)
+        .domain([0, d3.max(heatmapData.values(), d => d3.max(d.values()))]);
+
+    const svg = d3.select("#heatmap")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+    svg.selectAll(".heatmap-rect")
+        .data([...heatmapData.entries()].flatMap(([ageGroup, raceData]) =>
+            [...raceData.entries()].map(([race, count]) => ({ ageGroup, race, count }))))
+        .enter()
+        .append("rect")
+        .attr("x", d => x(d.ageGroup))
+        .attr("y", d => y(d.race))
+        .attr("width", x.bandwidth())
+        .attr("height", y.bandwidth())
+        .attr("fill", d => color(d.count))
+        .on("mouseover", (event, d) => {
+            tooltip.style("visibility", "visible")
+                   .text(`${d.ageGroup} - ${d.race}: ${d.count}`);
+        })
+        .on("mousemove", (event) => {
+            tooltip.style("top", (event.pageY + 10) + "px")
+                   .style("left", (event.pageX + 10) + "px");
+        })
+        .on("mouseout", () => tooltip.style("visibility", "hidden"));
+
+    // Add x-axis
+    svg.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(x))
+        .selectAll("text")
+        .attr("transform", "rotate(-45)")
+        .style("text-anchor", "end")
+        .style("font-size", "12px");
+
+    // Add y-axis
+    svg.append("g")
+        .call(d3.axisLeft(y))
+        .style("font-size", "12px");
+}
