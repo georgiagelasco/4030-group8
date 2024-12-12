@@ -103,6 +103,9 @@ function updateBarChart(data) {
         .append("g")
         .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
+    // Track selected bar for toggling
+    let selectedBar = null;
+
     svg.selectAll(".bar")
         .data(ageCounts)
         .enter()
@@ -112,20 +115,29 @@ function updateBarChart(data) {
         .attr("width", x.bandwidth())
         .attr("height", d => height - y(d[1]))
         .attr("fill", "#42a5f5")
-        .style("transition", "0.3s")
+        .style("cursor", "pointer")
         .on("mouseover", (event, d) => {
             const percentage = ((d[1] / total) * 100).toFixed(2);
             tooltip.style("visibility", "visible")
                    .text(`${d[0]}: ${d[1]} (${percentage}%)`);
-            d3.select(event.target).attr("fill", "#1e88e5");
         })
         .on("mousemove", (event) => {
             tooltip.style("top", (event.pageY + 10) + "px")
                    .style("left", (event.pageX + 10) + "px");
         })
-        .on("mouseout", (event) => {
-            tooltip.style("visibility", "hidden");
-            d3.select(event.target).attr("fill", "#42a5f5");
+        .on("mouseout", () => tooltip.style("visibility", "hidden"))
+        .on("click", (event, d) => {
+            // Toggle selection
+            if (selectedBar === d[0]) {
+                selectedBar = null;
+                d3.selectAll(".bar").attr("fill", "#42a5f5");
+                updateHeatmap({}, data); // Reset heatmap
+            } else {
+                selectedBar = d[0];
+                d3.selectAll(".bar").attr("fill", "#42a5f5"); // Reset all bars
+                d3.select(event.target).attr("fill", "#1e88e5"); // Highlight selected bar
+                updateHeatmap({ ageGroup: d[0] }, data); // Filter heatmap
+            }
         });
 
     svg.append("g")
@@ -139,14 +151,11 @@ function updateBarChart(data) {
     svg.append("g")
         .call(d3.axisLeft(y).ticks(6))
         .style("font-size", "12px");
-
-
 }
 
 function updateHeatmap(filter = {}, data = []) {
     const filteredData = data.filter(d => {
-        return (!filter.race || d.race_ethnicity_combined === filter.race) &&
-               (!filter.ageGroup || d.age_group === filter.ageGroup);
+        return (!filter.ageGroup || d.age_group === filter.ageGroup);
     });
 
     const heatmapData = d3.rollup(
@@ -178,11 +187,15 @@ function updateHeatmap(filter = {}, data = []) {
 
     const svg = d3.select("#heatmap")
         .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
+        .attr("height", height + margin.top + margin.bottom);
+
+    // Clear existing heatmap
+    svg.selectAll("*").remove();
+
+    const heatmapGroup = svg.append("g")
         .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
-    svg.selectAll(".heatmap-rect")
+    heatmapGroup.selectAll(".heatmap-rect")
         .data([...heatmapData.entries()].flatMap(([ageGroup, raceData]) =>
             [...raceData.entries()].map(([race, count]) => ({ ageGroup, race, count }))))
         .enter()
@@ -203,7 +216,7 @@ function updateHeatmap(filter = {}, data = []) {
         .on("mouseout", () => tooltip.style("visibility", "hidden"));
 
     // Add x-axis
-    svg.append("g")
+    heatmapGroup.append("g")
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x))
         .selectAll("text")
@@ -212,7 +225,7 @@ function updateHeatmap(filter = {}, data = []) {
         .style("font-size", "12px");
 
     // Add y-axis
-    svg.append("g")
+    heatmapGroup.append("g")
         .call(d3.axisLeft(y))
         .style("font-size", "12px");
 }
