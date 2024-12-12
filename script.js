@@ -201,7 +201,7 @@ function updateHeatmap(filter = {}, data = []) {
     const ageGroups = Array.from(new Set(data.map(d => d.age_group)));
     const races = Array.from(new Set(data.map(d => d.race_ethnicity_combined)));
 
-    const margin = { top: 30, right: 60, bottom: 100, left: 300 };
+    const margin = { top: 30, right: 80, bottom: 100, left: 300 };
     const width = 500;
     const height = 500;
 
@@ -215,10 +215,7 @@ function updateHeatmap(filter = {}, data = []) {
         .range([0, height])
         .padding(0.05);
 
-    const maxCount = d3.max(
-        Array.from(heatmapData.values()).flatMap(d => Array.from(d.values()))
-    );
-
+    const maxCount = d3.max(heatmapData.values(), d => d3.max(d.values()));
     const color = d3.scaleSequential(d3.interpolateViridis)
         .domain([0, maxCount]);
 
@@ -267,7 +264,7 @@ function updateHeatmap(filter = {}, data = []) {
     const legendHeight = 300, legendWidth = 20;
 
     const legendGroup = svg.append("g")
-        .attr("transform", `translate(${margin.left + width + 20}, ${margin.top})`);
+        .attr("transform", `translate(${margin.left + width + 30}, ${margin.top})`);
 
     const legendScale = d3.scaleLinear()
         .domain([0, maxCount])
@@ -306,9 +303,7 @@ function updateHeatmap(filter = {}, data = []) {
         .style("fill", "url(#heatmap-gradient)");
 
     legendGroup.append("g")
-        .attr("transform", `translate(${legendWidth}, 0)`)
+        .attr("transform", `translate(${legendWidth + 5}, 0)`) // Slightly shift the numbers further right
         .call(legendAxis)
         .style("font-size", "12px");
 }
-
-
