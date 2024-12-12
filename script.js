@@ -50,18 +50,27 @@ function updatePieChart(data) {
                 .style("left", (event.pageX + 10) + "px");
         })
         .on("mouseout", () => tooltip.style("visibility", "hidden"))
-        .on("click", (event, d) => {
-            // Toggle selection
+        .on("click", function (event, d) {
             const clickedRace = d.data[0];
-            if (selectedRace === clickedRace) {
-                selectedRace = null; // Deselect if already selected
-                updateHeatmap({}, data);
-                d3.selectAll("path").attr("fill", d => color(d.data[0])); // Reset colors
-            } else {
+            const isSelected = d3.select(this).classed("selected");
+
+            // Reset all slices
+            svg.selectAll("path")
+                .classed("selected", false)
+                .attr("fill", d => color(d.data[0]));
+
+            if (!isSelected) {
+                // Highlight selected slice
+                d3.select(this)
+                    .classed("selected", true)
+                    .attr("fill", "#1e3a5f");
+
                 selectedRace = clickedRace;
                 updateHeatmap({ race: clickedRace }, data);
-                d3.selectAll("path").attr("fill", d => color(d.data[0])); // Reset colors
-                d3.select(event.target).attr("fill", d3.color(color(clickedRace)).darker(1)); // Darken selected slice
+            } else {
+                // Deselect if already selected
+                selectedRace = null;
+                updateHeatmap({}, data);
             }
         });
 
