@@ -215,8 +215,8 @@ function updateHeatmap(filter = {}, data = []) {
         .range([0, height])
         .padding(0.05);
 
-    const color = d3.scaleSequential(d3.interpolateViridis)
-        .domain([0, d3.max(heatmapData.values(), d => d3.max(d.values()))]);
+    const maxCount = d3.max(heatmapData.values(), d => d3.max(d.values()));
+    const color = d3.scaleSequential(d3.interpolateViridis).domain([0, maxCount]);
 
     const svg = d3.select("#heatmap")
         .attr("width", width + margin.left + margin.right)
@@ -257,5 +257,47 @@ function updateHeatmap(filter = {}, data = []) {
 
     heatmapGroup.append("g")
         .call(d3.axisLeft(y))
+        .style("font-size", "12px");
+
+    // Add Legend
+    const legendWidth = 300, legendHeight = 20;
+
+    const legendGroup = svg.append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top + height + 40})`);
+
+    const legendScale = d3.scaleLinear()
+        .domain([0, maxCount])
+        .range([0, legendWidth]);
+
+    const legendAxis = d3.axisBottom(legendScale)
+        .ticks(5)
+        .tickFormat(d3.format(".0f"));
+
+    // Create gradient
+    const defs = svg.append("defs");
+    const linearGradient = defs.append("linearGradient")
+        .attr("id", "heatmap-gradient");
+
+    linearGradient.selectAll("stop")
+        .data(color.ticks(10).map((t, i, arr) => ({
+            offset: `${(i / (arr.length - 1)) * 100}%`,
+            color: color(t)
+        })))
+        .enter()
+        .append("stop")
+        .attr("offset", d => d.offset)
+        .attr("stop-color", d => d.color);
+
+    // Draw legend
+    legendGroup.append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", legendWidth)
+        .attr("height", legendHeight)
+        .style("fill", "url(#heatmap-gradient)");
+
+    legendGroup.append("g")
+        .attr("transform", `translate(0, ${legendHeight})`)
+        .call(legendAxis)
         .style("font-size", "12px");
 }
