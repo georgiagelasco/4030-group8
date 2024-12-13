@@ -63,8 +63,6 @@ function updatePieChart(data) {
                 selectedRaces.add(clickedRace); // Select
                 d3.select(this).classed("selected", true).attr("fill", "#1e3a5f");
             }
-
-            updateHeatmap({ races: Array.from(selectedRaces) }, data); // Update heatmap with selected races
         });
 
     // Add legend
@@ -156,7 +154,6 @@ function updateBarChart(data) {
                 selectedAgeGroups.add(clickedAgeGroup); // Select if not selected
                 d3.select(event.target).attr("fill", "#1e3a5f");
             }
-            updateHeatmap({ ageGroups: Array.from(selectedAgeGroups) }, data); // Update heatmap with selected age groups
         });
 
     svg.append("g")
@@ -172,10 +169,16 @@ function updateBarChart(data) {
         .style("font-size", "12px");
 }
 
-function updateHeatmap(filter = {}, data = []) {
+function updateHeatmap() {
+    const filter = {
+        races: Array.from(selectedRaces),
+        ageGroups: Array.from(selectedAgeGroups)
+    };
+
+    // Filter data based on selected races and age groups
     const filteredData = data.filter(d => {
-        return (!filter.races || filter.races.includes(d.race_ethnicity_combined)) &&
-               (!filter.ageGroups || filter.ageGroups.includes(d.age_group));
+        return (!filter.races.length || filter.races.includes(d.race_ethnicity_combined)) &&
+               (!filter.ageGroups.length || filter.ageGroups.includes(d.age_group));
     });
 
     const heatmapData = d3.rollup(
@@ -245,4 +248,3 @@ const data = [
 
 updatePieChart(data);
 updateBarChart(data);
-updateHeatmap({}, data); // Show heatmap with no filters initially
