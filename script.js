@@ -27,7 +27,7 @@ function updatePieChart(data) {
         .attr("width", 400)
         .attr("height", 600)
         .append("g")
-        .attr("transform", translate(${radius}, ${radius}));
+        .attr("transform", `translate(${radius}, ${radius})`);
 
     const pie = d3.pie().value(d => d[1]);
     const arc = d3.arc().innerRadius(0).outerRadius(radius);
