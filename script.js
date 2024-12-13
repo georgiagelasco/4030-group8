@@ -190,8 +190,9 @@ function updateBarChart(data) {
 
 function updateHeatmap(filter = {}, data = []) {
     const filteredData = data.filter(d => {
-        return (!filter.race || d.race_ethnicity_combined === filter.race) &&
-               (!filter.ageGroups || filter.ageGroups.includes(d.age_group));
+        const isRaceMatch = !filter.race || d.race_ethnicity_combined === filter.race;
+        const isAgeGroupMatch = !filter.ageGroups || filter.ageGroups.length === 0 || filter.ageGroups.includes(d.age_group);
+        return isRaceMatch && isAgeGroupMatch;
     });
 
     const heatmapData = d3.rollup(
@@ -315,4 +316,3 @@ function updateHeatmap(filter = {}, data = []) {
         .call(legendAxis)
         .style("font-size", "12px");
 }
-
