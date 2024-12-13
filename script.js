@@ -264,7 +264,7 @@ function updateHeatmap(filter = {}, data = []) {
     const legendHeight = 300, legendWidth = 20;
 
     const legendGroup = svg.append("g")
-        .attr("transform", `translate(${margin.left + width - 50}, ${margin.top})`); // Moved further left
+        .attr("transform", `translate(${margin.left + width - 30}, ${margin.top})`); // Moved further left
 
     const legendScale = d3.scaleLinear()
         .domain([0, maxCount])
