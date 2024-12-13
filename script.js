@@ -201,7 +201,7 @@ function updateHeatmap(filter = {}, data = []) {
     const ageGroups = Array.from(new Set(data.map(d => d.age_group)));
     const races = Array.from(new Set(data.map(d => d.race_ethnicity_combined)));
 
-    const margin = { top: 30, right: 80, bottom: 100, left: 300 }; // Adjusted right margin slightly
+    const margin = { top: 30, right: 100, bottom: 100, left: 300 }; // Adjust right margin slightly more
     const width = 500;
     const height = 500;
 
@@ -264,7 +264,7 @@ function updateHeatmap(filter = {}, data = []) {
     const legendHeight = 300, legendWidth = 20;
 
     const legendGroup = svg.append("g")
-        .attr("transform", `translate(${margin.left + width + 20}, ${margin.top})`); // Moved slightly left
+        .attr("transform", `translate(${margin.left + width - 50}, ${margin.top})`); // Moved further left
 
     const legendScale = d3.scaleLinear()
         .domain([0, maxCount])
@@ -307,3 +307,4 @@ function updateHeatmap(filter = {}, data = []) {
         .call(legendAxis)
         .style("font-size", "12px");
 }
+
