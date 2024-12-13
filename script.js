@@ -101,7 +101,7 @@ function updatePieChart(data) {
 }
 
 
-let selectedAgeGroup = null; // Track the selected age group
+let selectedAgeGroups = []; // Track the selected age groups
 
 function updateBarChart(data) {
     const ageCounts = d3.rollups(
@@ -135,12 +135,13 @@ function updateBarChart(data) {
         .data(ageCounts)
         .enter()
         .append("rect")
+        .attr("class", "bar")
         .attr("x", d => x(d[0]))
         .attr("y", d => y(d[1]))
         .attr("width", x.bandwidth())
         .attr("height", d => height - y(d[1]))
         .attr("fill", "#42a5f5")
-        .style("transition", "0.3s")
+        .style("cursor", "pointer")
         .on("mouseover", (event, d) => {
             const percentage = ((d[1] / total) * 100).toFixed(2);
             tooltip.style("visibility", "visible")
@@ -153,23 +154,24 @@ function updateBarChart(data) {
         })
         .on("mouseout", (event) => {
             tooltip.style("visibility", "hidden");
-            if (selectedAgeGroup !== event.target.__data__[0]) {
+            if (!selectedAgeGroups.includes(event.target.__data__[0])) {
                 d3.select(event.target).attr("fill", "#42a5f5");
             }
         })
         .on("click", (event, d) => {
-            // Toggle selection
             const clickedAgeGroup = d[0];
-            if (selectedAgeGroup === clickedAgeGroup) {
-                selectedAgeGroup = null; // Deselect if already selected
-                updateHeatmap({}, data);
+
+            if (selectedAgeGroups.includes(clickedAgeGroup)) {
+                // Deselect if already selected
+                selectedAgeGroups = selectedAgeGroups.filter(group => group !== clickedAgeGroup);
                 d3.select(event.target).attr("fill", "#42a5f5");
             } else {
-                selectedAgeGroup = clickedAgeGroup;
-                updateHeatmap({ ageGroup: clickedAgeGroup }, data);
-                d3.selectAll(".bar").attr("fill", "#42a5f5"); // Reset other bars
-                d3.select(event.target).attr("fill", "#1e3a5f"); // Highlight selected bar
+                // Add to selected
+                selectedAgeGroups.push(clickedAgeGroup);
+                d3.select(event.target).attr("fill", "#1e3a5f");
             }
+
+            updateHeatmap({ ageGroups: selectedAgeGroups }, data);
         });
 
     svg.append("g")
@@ -185,10 +187,11 @@ function updateBarChart(data) {
         .style("font-size", "12px");
 }
 
+
 function updateHeatmap(filter = {}, data = []) {
     const filteredData = data.filter(d => {
         return (!filter.race || d.race_ethnicity_combined === filter.race) &&
-               (!filter.ageGroup || d.age_group === filter.ageGroup);
+               (!filter.ageGroups || filter.ageGroups.includes(d.age_group));
     });
 
     const heatmapData = d3.rollup(
@@ -201,7 +204,7 @@ function updateHeatmap(filter = {}, data = []) {
     const ageGroups = Array.from(new Set(data.map(d => d.age_group)));
     const races = Array.from(new Set(data.map(d => d.race_ethnicity_combined)));
 
-    const margin = { top: 30, right: 100, bottom: 100, left: 300 }; // Adjust right margin slightly more
+    const margin = { top: 30, right: 100, bottom: 100, left: 300 }; // Adjust margins as needed
     const width = 500;
     const height = 500;
 
@@ -215,9 +218,9 @@ function updateHeatmap(filter = {}, data = []) {
         .range([0, height])
         .padding(0.05);
 
-    const maxCount = d3.max(heatmapData.values(), d => d3.max(d.values()));
+    const maxCount = d3.max(Array.from(heatmapData.values(), d => d3.max(d.values())));
     const color = d3.scaleSequential(d3.interpolateViridis)
-        .domain([0, maxCount]);
+        .domain([0, maxCount || 1]);
 
     const svg = d3.select("#heatmap")
         .attr("width", width + margin.left + margin.right)
@@ -226,11 +229,16 @@ function updateHeatmap(filter = {}, data = []) {
     // Clear the heatmap and re-render
     svg.selectAll("*").remove();
 
-    const heatmapGroup = svg.append("g").attr("transform", `translate(${margin.left}, ${margin.top})`);
+    const heatmapGroup = svg.append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
     heatmapGroup.selectAll(".heatmap-rect")
         .data([...heatmapData.entries()].flatMap(([ageGroup, raceData]) =>
-            [...raceData.entries()].map(([race, count]) => ({ ageGroup, race, count }))))
+            [...raceData.entries()].map(([race, count]) => ({
+                ageGroup,
+                race,
+                count: count || 0 // Handle cases with no data
+            }))))
         .enter()
         .append("rect")
         .attr("x", d => x(d.ageGroup))
@@ -260,14 +268,14 @@ function updateHeatmap(filter = {}, data = []) {
         .call(d3.axisLeft(y))
         .style("font-size", "12px");
 
-    // Add Legend
+    // Add legend
     const legendHeight = 300, legendWidth = 20;
 
     const legendGroup = svg.append("g")
-        .attr("transform", `translate(${margin.left + width + 10}, ${margin.top})`); // Moved further left
+        .attr("transform", `translate(${margin.left + width + 10}, ${margin.top})`);
 
     const legendScale = d3.scaleLinear()
-        .domain([0, maxCount])
+        .domain([0, maxCount || 1])
         .range([legendHeight, 0]);
 
     const legendAxis = d3.axisRight(legendScale)
@@ -307,3 +315,4 @@ function updateHeatmap(filter = {}, data = []) {
         .call(legendAxis)
         .style("font-size", "12px");
 }
+
