@@ -1,4 +1,4 @@
-// Add a styled tooltip element
+ // Add a styled tooltip element
 const tooltip = d3.select("body")
     .append("div")
     .attr("class", "tooltip")
@@ -11,8 +11,7 @@ const tooltip = d3.select("body")
     .style("font-size", "12px")
     .style("visibility", "hidden");
 
-let selectedRaces = new Set(); // Track multiple selected races
-let selectedAgeGroups = new Set(); // Track multiple selected age groups
+let selectedRace = null; // Track the selected race
 
 function updatePieChart(data) {
     const raceCounts = d3.rollups(
@@ -28,7 +27,7 @@ function updatePieChart(data) {
         .attr("width", 400)
         .attr("height", 600)
         .append("g")
-        .attr("transform", `translate(${radius}, ${radius})`);
+        .attr("transform", translate(${radius}, ${radius}));
 
     const pie = d3.pie().value(d => d[1]);
     const arc = d3.arc().innerRadius(0).outerRadius(radius);
@@ -44,7 +43,7 @@ function updatePieChart(data) {
         .on("mouseover", (event, d) => {
             const percentage = ((d.data[1] / total) * 100).toFixed(2);
             tooltip.style("visibility", "visible")
-                .text(`${d.data[0]}: ${d.data[1]} (${percentage}%)`);
+                .text(${d.data[0]}: ${d.data[1]} (${percentage}%));
         })
         .on("mousemove", (event) => {
             tooltip.style("top", (event.pageY + 10) + "px")
@@ -55,22 +54,30 @@ function updatePieChart(data) {
             const clickedRace = d.data[0];
             const isSelected = d3.select(this).classed("selected");
 
-            // Toggle selection
-            if (isSelected) {
-                selectedRaces.delete(clickedRace); // Deselect
-                d3.select(this).classed("selected", false).attr("fill", color(clickedRace));
-            } else {
-                selectedRaces.add(clickedRace); // Select
-                d3.select(this).classed("selected", true).attr("fill", "#1e3a5f");
-            }
+            // Reset all slices
+            svg.selectAll("path")
+                .classed("selected", false)
+                .attr("fill", d => color(d.data[0]));
 
-            updateHeatmap({ races: Array.from(selectedRaces) }, data); // Update heatmap with selected races
+            if (!isSelected) {
+                // Highlight selected slice
+                d3.select(this)
+                    .classed("selected", true)
+                    .attr("fill", "#1e3a5f");
+
+                selectedRace = clickedRace;
+                updateHeatmap({ race: clickedRace }, data);
+            } else {
+                // Deselect if already selected
+                selectedRace = null;
+                updateHeatmap({}, data);
+            }
         });
 
     // Add legend
     const legend = d3.select("#pieChart")
         .append("g")
-        .attr("transform", `translate(10, ${2 * radius + 20})`);
+        .attr("transform", translate(10, ${2 * radius + 20}));
 
     legend.selectAll("rect")
         .data(raceCounts)
@@ -92,6 +99,9 @@ function updatePieChart(data) {
         .style("font-size", "14px")
         .style("fill", "#333");
 }
+
+
+let selectedAgeGroup = null; // Track the selected age group
 
 function updateBarChart(data) {
     const ageCounts = d3.rollups(
@@ -119,7 +129,7 @@ function updateBarChart(data) {
         .attr("width", 700)
         .attr("height", 400)
         .append("g")
-        .attr("transform", `translate(${margin.left}, ${margin.top})`);
+        .attr("transform", translate(${margin.left}, ${margin.top}));
 
     svg.selectAll(".bar")
         .data(ageCounts)
@@ -134,7 +144,7 @@ function updateBarChart(data) {
         .on("mouseover", (event, d) => {
             const percentage = ((d[1] / total) * 100).toFixed(2);
             tooltip.style("visibility", "visible")
-                   .text(`${d[0]}: ${d[1]} (${percentage}%)`);
+                   .text(${d[0]}: ${d[1]} (${percentage}%));
             d3.select(event.target).attr("fill", "#1e88e5");
         })
         .on("mousemove", (event) => {
@@ -143,24 +153,27 @@ function updateBarChart(data) {
         })
         .on("mouseout", (event) => {
             tooltip.style("visibility", "hidden");
-            if (!selectedAgeGroups.has(event.target.__data__[0])) {
+            if (selectedAgeGroup !== event.target.__data__[0]) {
                 d3.select(event.target).attr("fill", "#42a5f5");
             }
         })
         .on("click", (event, d) => {
+            // Toggle selection
             const clickedAgeGroup = d[0];
-            if (selectedAgeGroups.has(clickedAgeGroup)) {
-                selectedAgeGroups.delete(clickedAgeGroup); // Deselect if already selected
+            if (selectedAgeGroup === clickedAgeGroup) {
+                selectedAgeGroup = null; // Deselect if already selected
+                updateHeatmap({}, data);
                 d3.select(event.target).attr("fill", "#42a5f5");
             } else {
-                selectedAgeGroups.add(clickedAgeGroup); // Select if not selected
-                d3.select(event.target).attr("fill", "#1e3a5f");
+                selectedAgeGroup = clickedAgeGroup;
+                updateHeatmap({ ageGroup: clickedAgeGroup }, data);
+                d3.selectAll(".bar").attr("fill", "#42a5f5"); // Reset other bars
+                d3.select(event.target).attr("fill", "#1e3a5f"); // Highlight selected bar
             }
-            updateHeatmap({ ageGroups: Array.from(selectedAgeGroups) }, data); // Update heatmap with selected age groups
         });
 
     svg.append("g")
-        .attr("transform", `translate(0,${height})`)
+        .attr("transform", translate(0,${height}))
         .call(d3.axisBottom(x))
         .selectAll("text")
         .attr("transform", "rotate(-45)")
@@ -174,8 +187,8 @@ function updateBarChart(data) {
 
 function updateHeatmap(filter = {}, data = []) {
     const filteredData = data.filter(d => {
-        return (!filter.races || filter.races.includes(d.race_ethnicity_combined)) &&
-               (!filter.ageGroups || filter.ageGroups.includes(d.age_group));
+        return (!filter.race || d.race_ethnicity_combined === filter.race) &&
+               (!filter.ageGroup || d.age_group === filter.ageGroup);
     });
 
     const heatmapData = d3.rollup(
@@ -213,38 +226,84 @@ function updateHeatmap(filter = {}, data = []) {
     // Clear the heatmap and re-render
     svg.selectAll("*").remove();
 
-    const heatmap = svg.append("g")
-        .attr("transform", `translate(${margin.left}, ${margin.top})`);
+    const heatmapGroup = svg.append("g").attr("transform", translate(${margin.left}, ${margin.top}));
 
-    heatmap.selectAll("rect")
-        .data(Array.from(heatmapData.entries()))
+    heatmapGroup.selectAll(".heatmap-rect")
+        .data([...heatmapData.entries()].flatMap(([ageGroup, raceData]) =>
+            [...raceData.entries()].map(([race, count]) => ({ ageGroup, race, count }))))
         .enter()
         .append("rect")
-        .attr("x", d => x(d[0]))
-        .attr("y", d => y(d[1]))
+        .attr("x", d => x(d.ageGroup))
+        .attr("y", d => y(d.race))
         .attr("width", x.bandwidth())
         .attr("height", y.bandwidth())
-        .attr("fill", d => color(d[1].length));
+        .attr("fill", d => color(d.count))
+        .on("mouseover", (event, d) => {
+            tooltip.style("visibility", "visible")
+                .text(${d.ageGroup} - ${d.race}: ${d.count});
+        })
+        .on("mousemove", (event) => {
+            tooltip.style("top", (event.pageY + 10) + "px")
+                .style("left", (event.pageX + 10) + "px");
+        })
+        .on("mouseout", () => tooltip.style("visibility", "hidden"));
 
-    // Add x and y axis
-    svg.append("g")
-        .attr("transform", `translate(${margin.left},${margin.top + height})`)
-        .call(d3.axisBottom(x));
+    heatmapGroup.append("g")
+        .attr("transform", translate(0,${height}))
+        .call(d3.axisBottom(x))
+        .selectAll("text")
+        .attr("transform", "rotate(-45)")
+        .style("text-anchor", "end")
+        .style("font-size", "12px");
 
-    svg.append("g")
-        .attr("transform", `translate(${margin.left},${margin.top})`)
-        .call(d3.axisLeft(y));
+    heatmapGroup.append("g")
+        .call(d3.axisLeft(y))
+        .style("font-size", "12px");
+
+    // Add Legend
+    const legendHeight = 300, legendWidth = 20;
+
+    const legendGroup = svg.append("g")
+        .attr("transform", translate(${margin.left + width + 10}, ${margin.top})); // Moved further left
+
+    const legendScale = d3.scaleLinear()
+        .domain([0, maxCount])
+        .range([legendHeight, 0]);
+
+    const legendAxis = d3.axisRight(legendScale)
+        .ticks(5)
+        .tickFormat(d3.format(".0f"));
+
+    // Create gradient
+    const defs = svg.append("defs");
+    const linearGradient = defs.append("linearGradient")
+        .attr("id", "heatmap-gradient")
+        .attr("gradientUnits", "userSpaceOnUse")
+        .attr("x1", "0%")
+        .attr("y1", "100%")
+        .attr("x2", "0%")
+        .attr("y2", "0%");
+
+    linearGradient.selectAll("stop")
+        .data(color.ticks(10).map((t, i, arr) => ({
+            offset: ${(i / (arr.length - 1)) * 100}%,
+            color: color(t)
+        })))
+        .enter()
+        .append("stop")
+        .attr("offset", d => d.offset)
+        .attr("stop-color", d => d.color);
+
+    // Draw legend
+    legendGroup.append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", legendWidth)
+        .attr("height", legendHeight)
+        .style("fill", "url(#heatmap-gradient)");
+
+    legendGroup.append("g")
+        .attr("transform", translate(${legendWidth + 10}, 0))
+        .call(legendAxis)
+        .style("font-size", "12px");
 }
-
-// Example usage:
-const data = [
-    { age_group: "18-24", race_ethnicity_combined: "White" },
-    { age_group: "18-24", race_ethnicity_combined: "Black" },
-    // more data...
-];
-
-updatePieChart(data);
-updateBarChart(data);
-updateHeatmap({}, data); // Show heatmap with no filters initially
-
-
