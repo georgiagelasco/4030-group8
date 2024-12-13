@@ -236,3 +236,13 @@ function updateHeatmap(filter = {}, data = []) {
         .call(d3.axisLeft(y));
 }
 
+// Example usage:
+const data = [
+    { age_group: "18-24", race_ethnicity_combined: "White" },
+    { age_group: "18-24", race_ethnicity_combined: "Black" },
+    // more data...
+];
+
+updatePieChart(data);
+updateBarChart(data);
+updateHeatmap({}, data); // Show heatmap with no filters initially
