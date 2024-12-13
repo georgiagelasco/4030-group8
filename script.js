@@ -11,7 +11,7 @@ const tooltip = d3.select("body")
     .style("font-size", "12px")
     .style("visibility", "hidden");
 
-let selectedRaces = []; // Track multiple selected races
+let selectedRace = null; // Track the selected race
 
 function updatePieChart(data) {
     const raceCounts = d3.rollups(
@@ -27,7 +27,7 @@ function updatePieChart(data) {
         .attr("width", 400)
         .attr("height", 600)
         .append("g")
-        .attr("transform", `translate(${radius}, ${radius})`);
+        .attr("transform", translate(${radius}, ${radius}));
 
     const pie = d3.pie().value(d => d[1]);
     const arc = d3.arc().innerRadius(0).outerRadius(radius);
@@ -43,7 +43,7 @@ function updatePieChart(data) {
         .on("mouseover", (event, d) => {
             const percentage = ((d.data[1] / total) * 100).toFixed(2);
             tooltip.style("visibility", "visible")
-                .text(`${d.data[0]}: ${d.data[1]} (${percentage}%)`);
+                .text(${d.data[0]}: ${d.data[1]} (${percentage}%));
         })
         .on("mousemove", (event) => {
             tooltip.style("top", (event.pageY + 10) + "px")
@@ -54,28 +54,30 @@ function updatePieChart(data) {
             const clickedRace = d.data[0];
             const isSelected = d3.select(this).classed("selected");
 
+            // Reset all slices
+            svg.selectAll("path")
+                .classed("selected", false)
+                .attr("fill", d => color(d.data[0]));
+
             if (!isSelected) {
-                // Add selected race to array
-                selectedRaces.push(clickedRace);
+                // Highlight selected slice
                 d3.select(this)
                     .classed("selected", true)
                     .attr("fill", "#1e3a5f");
-            } else {
-                // Remove selected race from array
-                selectedRaces = selectedRaces.filter(race => race !== clickedRace);
-                d3.select(this)
-                    .classed("selected", false)
-                    .attr("fill", color(clickedRace));
-            }
 
-            // Update heatmap with selected races
-            updateHeatmap({ races: selectedRaces }, data);
+                selectedRace = clickedRace;
+                updateHeatmap({ race: clickedRace }, data);
+            } else {
+                // Deselect if already selected
+                selectedRace = null;
+                updateHeatmap({}, data);
+            }
         });
 
-    // Add legend (same as original code)
+    // Add legend
     const legend = d3.select("#pieChart")
         .append("g")
-        .attr("transform", `translate(10, ${2 * radius + 20})`);
+        .attr("transform", translate(10, ${2 * radius + 20}));
 
     legend.selectAll("rect")
         .data(raceCounts)
@@ -185,8 +187,7 @@ function updateBarChart(data) {
 
 function updateHeatmap(filter = {}, data = []) {
     const filteredData = data.filter(d => {
-        // Include data that matches any of the selected races
-        return (!filter.races || filter.races.includes(d.race_ethnicity_combined)) &&
+        return (!filter.race || d.race_ethnicity_combined === filter.race) &&
                (!filter.ageGroup || d.age_group === filter.ageGroup);
     });
 
@@ -225,7 +226,7 @@ function updateHeatmap(filter = {}, data = []) {
     // Clear the heatmap and re-render
     svg.selectAll("*").remove();
 
-    const heatmapGroup = svg.append("g").attr("transform", `translate(${margin.left}, ${margin.top})`);
+    const heatmapGroup = svg.append("g").attr("transform", translate(${margin.left}, ${margin.top}));
 
     heatmapGroup.selectAll(".heatmap-rect")
         .data([...heatmapData.entries()].flatMap(([ageGroup, raceData]) =>
@@ -239,7 +240,7 @@ function updateHeatmap(filter = {}, data = []) {
         .attr("fill", d => color(d.count))
         .on("mouseover", (event, d) => {
             tooltip.style("visibility", "visible")
-                .text(`${d.ageGroup} - ${d.race}: ${d.count}`);
+                .text(${d.ageGroup} - ${d.race}: ${d.count});
         })
         .on("mousemove", (event) => {
             tooltip.style("top", (event.pageY + 10) + "px")
@@ -247,16 +248,8 @@ function updateHeatmap(filter = {}, data = []) {
         })
         .on("mouseout", () => tooltip.style("visibility", "hidden"));
 
-    // Highlight rows matching any selected race
-    heatmapGroup.selectAll(".heatmap-rect")
-        .filter(d => filter.races && filter.races.includes(d.race))
-        .style("stroke", "#fff")
-        .style("stroke-width", "2px")
-        .attr("fill", "#f0a"); // Highlight color for selected races
-
-    // Add axes (same as original code)
     heatmapGroup.append("g")
-        .attr("transform", `translate(0,${height})`)
+        .attr("transform", translate(0,${height}))
         .call(d3.axisBottom(x))
         .selectAll("text")
         .attr("transform", "rotate(-45)")
@@ -267,11 +260,11 @@ function updateHeatmap(filter = {}, data = []) {
         .call(d3.axisLeft(y))
         .style("font-size", "12px");
 
-    // Add legend (same as original code)
+    // Add Legend
     const legendHeight = 300, legendWidth = 20;
 
     const legendGroup = svg.append("g")
-        .attr("transform", `translate(${margin.left + width + 10}, ${margin.top})`);
+        .attr("transform", translate(${margin.left + width + 10}, ${margin.top})); // Moved further left
 
     const legendScale = d3.scaleLinear()
         .domain([0, maxCount])
@@ -281,7 +274,7 @@ function updateHeatmap(filter = {}, data = []) {
         .ticks(5)
         .tickFormat(d3.format(".0f"));
 
-    // Create gradient for legend
+    // Create gradient
     const defs = svg.append("defs");
     const linearGradient = defs.append("linearGradient")
         .attr("id", "heatmap-gradient")
@@ -293,7 +286,7 @@ function updateHeatmap(filter = {}, data = []) {
 
     linearGradient.selectAll("stop")
         .data(color.ticks(10).map((t, i, arr) => ({
-            offset: `${(i / (arr.length - 1)) * 100}%`,
+            offset: ${(i / (arr.length - 1)) * 100}%,
             color: color(t)
         })))
         .enter()
@@ -310,8 +303,9 @@ function updateHeatmap(filter = {}, data = []) {
         .style("fill", "url(#heatmap-gradient)");
 
     legendGroup.append("g")
-        .attr("transform", `translate(${legendWidth + 10}, 0)`)
+        .attr("transform", translate(${legendWidth + 10}, 0))
         .call(legendAxis)
         .style("font-size", "12px");
 }
+
 
