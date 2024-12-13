@@ -11,7 +11,7 @@ const tooltip = d3.select("body")
     .style("font-size", "12px")
     .style("visibility", "hidden");
 
-let selectedRace = null; // Track the selected race
+let selectedRaces = []; // Track the selected races
 
 function updatePieChart(data) {
     const raceCounts = d3.rollups(
@@ -52,26 +52,20 @@ function updatePieChart(data) {
         .on("mouseout", () => tooltip.style("visibility", "hidden"))
         .on("click", function (event, d) {
             const clickedRace = d.data[0];
-            const isSelected = d3.select(this).classed("selected");
+            const isSelected = selectedRaces.includes(clickedRace);
 
-            // Reset all slices
-            svg.selectAll("path")
-                .classed("selected", false)
-                .attr("fill", d => color(d.data[0]));
-
-            if (!isSelected) {
-                // Highlight selected slice
-                d3.select(this)
-                    .classed("selected", true)
-                    .attr("fill", "#1e3a5f");
-
-                selectedRace = clickedRace;
-                updateHeatmap({ race: clickedRace }, data);
-            } else {
+            if (isSelected) {
                 // Deselect if already selected
-                selectedRace = null;
-                updateHeatmap({}, data);
+                selectedRaces = selectedRaces.filter(race => race !== clickedRace);
+                d3.select(this).attr("fill", color(clickedRace));
+            } else {
+                // Add to selected races
+                selectedRaces.push(clickedRace);
+                d3.select(this).attr("fill", "#1e3a5f");
             }
+
+            // Update heatmap based on selected races
+            updateHeatmap({ races: selectedRaces }, data);
         });
 
     // Add legend
@@ -189,12 +183,14 @@ function updateBarChart(data) {
 
 
 function updateHeatmap(filter = {}, data = []) {
+    // Filter the data based on selected races and age groups
     const filteredData = data.filter(d => {
-        const isRaceMatch = !filter.race || d.race_ethnicity_combined === filter.race;
+        const isRaceMatch = !filter.races || filter.races.length === 0 || filter.races.includes(d.race_ethnicity_combined);
         const isAgeGroupMatch = !filter.ageGroups || filter.ageGroups.length === 0 || filter.ageGroups.includes(d.age_group);
         return isRaceMatch && isAgeGroupMatch;
     });
 
+    // Roll up data for the heatmap
     const heatmapData = d3.rollup(
         filteredData,
         v => v.length,
@@ -205,7 +201,8 @@ function updateHeatmap(filter = {}, data = []) {
     const ageGroups = Array.from(new Set(data.map(d => d.age_group)));
     const races = Array.from(new Set(data.map(d => d.race_ethnicity_combined)));
 
-    const margin = { top: 30, right: 100, bottom: 100, left: 300 }; // Adjust margins as needed
+    // Heatmap dimensions and scales
+    const margin = { top: 30, right: 100, bottom: 100, left: 300 };
     const width = 500;
     const height = 500;
 
@@ -219,7 +216,7 @@ function updateHeatmap(filter = {}, data = []) {
         .range([0, height])
         .padding(0.05);
 
-    const maxCount = d3.max(Array.from(heatmapData.values(), d => d3.max(d.values())));
+    const maxCount = d3.max([...heatmapData.values()].flatMap(raceData => [...raceData.values()]));
     const color = d3.scaleSequential(d3.interpolateViridis)
         .domain([0, maxCount || 1]);
 
@@ -227,12 +224,13 @@ function updateHeatmap(filter = {}, data = []) {
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom);
 
-    // Clear the heatmap and re-render
+    // Clear any previous heatmap
     svg.selectAll("*").remove();
 
     const heatmapGroup = svg.append("g")
         .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
+    // Render heatmap rectangles
     heatmapGroup.selectAll(".heatmap-rect")
         .data([...heatmapData.entries()].flatMap(([ageGroup, raceData]) =>
             [...raceData.entries()].map(([race, count]) => ({
@@ -257,6 +255,7 @@ function updateHeatmap(filter = {}, data = []) {
         })
         .on("mouseout", () => tooltip.style("visibility", "hidden"));
 
+    // Add X-axis (age groups)
     heatmapGroup.append("g")
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x))
@@ -265,6 +264,7 @@ function updateHeatmap(filter = {}, data = []) {
         .style("text-anchor", "end")
         .style("font-size", "12px");
 
+    // Add Y-axis (races)
     heatmapGroup.append("g")
         .call(d3.axisLeft(y))
         .style("font-size", "12px");
@@ -316,3 +316,4 @@ function updateHeatmap(filter = {}, data = []) {
         .call(legendAxis)
         .style("font-size", "12px");
 }
+
