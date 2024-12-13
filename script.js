@@ -55,20 +55,16 @@ function updatePieChart(data) {
             const isSelected = selectedRaces.includes(clickedRace);
 
             if (isSelected) {
-                // Deselect if already selected
                 selectedRaces = selectedRaces.filter(race => race !== clickedRace);
                 d3.select(this).attr("fill", color(clickedRace));
             } else {
-                // Add to selected races
                 selectedRaces.push(clickedRace);
                 d3.select(this).attr("fill", "#1e3a5f");
             }
 
-            // Update heatmap based on selected races
             updateHeatmap({ races: selectedRaces }, data);
         });
 
-    // Add legend
     const legend = d3.select("#pieChart")
         .append("g")
         .attr("transform", `translate(10, ${2 * radius + 20})`);
@@ -93,7 +89,6 @@ function updatePieChart(data) {
         .style("font-size", "14px")
         .style("fill", "#333");
 }
-
 
 let selectedAgeGroups = []; // Track the selected age groups
 
@@ -156,11 +151,9 @@ function updateBarChart(data) {
             const clickedAgeGroup = d[0];
 
             if (selectedAgeGroups.includes(clickedAgeGroup)) {
-                // Deselect if already selected
                 selectedAgeGroups = selectedAgeGroups.filter(group => group !== clickedAgeGroup);
                 d3.select(event.target).attr("fill", "#42a5f5");
             } else {
-                // Add to selected
                 selectedAgeGroups.push(clickedAgeGroup);
                 d3.select(event.target).attr("fill", "#1e3a5f");
             }
@@ -181,16 +174,13 @@ function updateBarChart(data) {
         .style("font-size", "12px");
 }
 
-
 function updateHeatmap(filter = {}, data = []) {
-    // Filter the data based on selected races and age groups
     const filteredData = data.filter(d => {
         const isRaceMatch = !filter.races || filter.races.length === 0 || filter.races.includes(d.race_ethnicity_combined);
         const isAgeGroupMatch = !filter.ageGroups || filter.ageGroups.length === 0 || filter.ageGroups.includes(d.age_group);
         return isRaceMatch && isAgeGroupMatch;
     });
 
-    // Roll up data for the heatmap
     const heatmapData = d3.rollup(
         filteredData,
         v => v.length,
@@ -201,7 +191,6 @@ function updateHeatmap(filter = {}, data = []) {
     const ageGroups = Array.from(new Set(data.map(d => d.age_group)));
     const races = Array.from(new Set(data.map(d => d.race_ethnicity_combined)));
 
-    // Heatmap dimensions and scales
     const margin = { top: 30, right: 100, bottom: 100, left: 300 };
     const width = 500;
     const height = 500;
@@ -224,19 +213,17 @@ function updateHeatmap(filter = {}, data = []) {
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom);
 
-    // Clear any previous heatmap
     svg.selectAll("*").remove();
 
     const heatmapGroup = svg.append("g")
         .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
-    // Render heatmap rectangles
     heatmapGroup.selectAll(".heatmap-rect")
         .data([...heatmapData.entries()].flatMap(([ageGroup, raceData]) =>
             [...raceData.entries()].map(([race, count]) => ({
                 ageGroup,
                 race,
-                count: count || 0 // Handle cases with no data
+                count: count || 0
             }))))
         .enter()
         .append("rect")
@@ -255,7 +242,6 @@ function updateHeatmap(filter = {}, data = []) {
         })
         .on("mouseout", () => tooltip.style("visibility", "hidden"));
 
-    // Add X-axis (age groups)
     heatmapGroup.append("g")
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x))
@@ -264,12 +250,10 @@ function updateHeatmap(filter = {}, data = []) {
         .style("text-anchor", "end")
         .style("font-size", "12px");
 
-    // Add Y-axis (races)
     heatmapGroup.append("g")
         .call(d3.axisLeft(y))
         .style("font-size", "12px");
 
-    // Add legend
     const legendHeight = 300, legendWidth = 20;
 
     const legendGroup = svg.append("g")
@@ -283,7 +267,6 @@ function updateHeatmap(filter = {}, data = []) {
         .ticks(5)
         .tickFormat(d3.format(".0f"));
 
-    // Create gradient
     const defs = svg.append("defs");
     const linearGradient = defs.append("linearGradient")
         .attr("id", "heatmap-gradient")
@@ -303,7 +286,6 @@ function updateHeatmap(filter = {}, data = []) {
         .attr("offset", d => d.offset)
         .attr("stop-color", d => d.color);
 
-    // Draw legend
     legendGroup.append("rect")
         .attr("x", 0)
         .attr("y", 0)
@@ -316,4 +298,3 @@ function updateHeatmap(filter = {}, data = []) {
         .call(legendAxis)
         .style("font-size", "12px");
 }
-
