@@ -1,4 +1,4 @@
- // Add a styled tooltip element
+// Add a styled tooltip element
 const tooltip = d3.select("body")
     .append("div")
     .attr("class", "tooltip")
@@ -43,7 +43,7 @@ function updatePieChart(data) {
         .on("mouseover", (event, d) => {
             const percentage = ((d.data[1] / total) * 100).toFixed(2);
             tooltip.style("visibility", "visible")
-                .text(${d.data[0]}: ${d.data[1]} (${percentage}%));
+                .text(`${d.data[0]}: ${d.data[1]} (${percentage}%)`);
         })
         .on("mousemove", (event) => {
             tooltip.style("top", (event.pageY + 10) + "px")
@@ -77,7 +77,7 @@ function updatePieChart(data) {
     // Add legend
     const legend = d3.select("#pieChart")
         .append("g")
-        .attr("transform", translate(10, ${2 * radius + 20}));
+        .attr("transform", `translate(10, ${2 * radius + 20})`);
 
     legend.selectAll("rect")
         .data(raceCounts)
@@ -129,7 +129,7 @@ function updateBarChart(data) {
         .attr("width", 700)
         .attr("height", 400)
         .append("g")
-        .attr("transform", translate(${margin.left}, ${margin.top}));
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
     svg.selectAll(".bar")
         .data(ageCounts)
@@ -144,7 +144,7 @@ function updateBarChart(data) {
         .on("mouseover", (event, d) => {
             const percentage = ((d[1] / total) * 100).toFixed(2);
             tooltip.style("visibility", "visible")
-                   .text(${d[0]}: ${d[1]} (${percentage}%));
+                   .text(`${d[0]}: ${d[1]} (${percentage}%)`);
             d3.select(event.target).attr("fill", "#1e88e5");
         })
         .on("mousemove", (event) => {
@@ -173,7 +173,7 @@ function updateBarChart(data) {
         });
 
     svg.append("g")
-        .attr("transform", translate(0,${height}))
+        .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x))
         .selectAll("text")
         .attr("transform", "rotate(-45)")
@@ -226,7 +226,7 @@ function updateHeatmap(filter = {}, data = []) {
     // Clear the heatmap and re-render
     svg.selectAll("*").remove();
 
-    const heatmapGroup = svg.append("g").attr("transform", translate(${margin.left}, ${margin.top}));
+    const heatmapGroup = svg.append("g").attr("transform", `translate(${margin.left}, ${margin.top})`);
 
     heatmapGroup.selectAll(".heatmap-rect")
         .data([...heatmapData.entries()].flatMap(([ageGroup, raceData]) =>
@@ -240,7 +240,7 @@ function updateHeatmap(filter = {}, data = []) {
         .attr("fill", d => color(d.count))
         .on("mouseover", (event, d) => {
             tooltip.style("visibility", "visible")
-                .text(${d.ageGroup} - ${d.race}: ${d.count});
+                .text(`${d.ageGroup} - ${d.race}: ${d.count}`);
         })
         .on("mousemove", (event) => {
             tooltip.style("top", (event.pageY + 10) + "px")
@@ -249,7 +249,7 @@ function updateHeatmap(filter = {}, data = []) {
         .on("mouseout", () => tooltip.style("visibility", "hidden"));
 
     heatmapGroup.append("g")
-        .attr("transform", translate(0,${height}))
+        .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x))
         .selectAll("text")
         .attr("transform", "rotate(-45)")
@@ -264,7 +264,7 @@ function updateHeatmap(filter = {}, data = []) {
     const legendHeight = 300, legendWidth = 20;
 
     const legendGroup = svg.append("g")
-        .attr("transform", translate(${margin.left + width + 10}, ${margin.top})); // Moved further left
+        .attr("transform", `translate(${margin.left + width + 10}, ${margin.top})`); // Moved further left
 
     const legendScale = d3.scaleLinear()
         .domain([0, maxCount])
@@ -286,7 +286,7 @@ function updateHeatmap(filter = {}, data = []) {
 
     linearGradient.selectAll("stop")
         .data(color.ticks(10).map((t, i, arr) => ({
-            offset: ${(i / (arr.length - 1)) * 100}%,
+            offset: `${(i / (arr.length - 1)) * 100}%`,
             color: color(t)
         })))
         .enter()
@@ -303,9 +303,7 @@ function updateHeatmap(filter = {}, data = []) {
         .style("fill", "url(#heatmap-gradient)");
 
     legendGroup.append("g")
-        .attr("transform", translate(${legendWidth + 10}, 0))
+        .attr("transform", `translate(${legendWidth + 10}, 0)`)
         .call(legendAxis)
         .style("font-size", "12px");
 }
-
-
