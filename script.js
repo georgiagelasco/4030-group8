@@ -97,19 +97,25 @@ function updatePieChart(data) {
 
 
 function updateBarChart(data) {
+    // Roll up age group counts without sorting
     const ageCounts = d3.rollups(
         data,
         v => v.length,
         d => d.age_group
-    ).sort((a, b) => b[1] - a[1]);
+    );
 
     const total = d3.sum(ageCounts, d => d[1]);
     const margin = { top: 20, right: 20, bottom: 60, left: 50 };
     const width = 700 - margin.left - margin.right;
     const height = 300 - margin.top - margin.bottom;
 
+    // Sort the age groups alphabetically by name
+    const sortedAgeGroups = ageCounts
+        .map(d => d[0])
+        .sort((a, b) => a.localeCompare(b));
+
     const x = d3.scaleBand()
-        .domain(ageCounts.map(d => d[0]))
+        .domain(sortedAgeGroups)
         .range([0, width])
         .padding(0.1);
 
@@ -118,12 +124,14 @@ function updateBarChart(data) {
         .nice()
         .range([height, 0]);
 
+    // Create the SVG container
     const svg = d3.select("#barChart")
         .attr("width", 700)
         .attr("height", 400)
         .append("g")
         .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
+    // Draw bars
     svg.selectAll(".bar")
         .data(ageCounts)
         .enter()
@@ -167,6 +175,7 @@ function updateBarChart(data) {
             updateHeatmap({ races: selectedRaces, ageGroups: selectedAgeGroups }, data);
         });
 
+    // Add x-axis
     svg.append("g")
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x))
@@ -175,10 +184,12 @@ function updateBarChart(data) {
         .style("text-anchor", "end")
         .style("font-size", "12px");
 
+    // Add y-axis
     svg.append("g")
         .call(d3.axisLeft(y).ticks(6))
         .style("font-size", "12px");
 }
+
 
 
 function updateHeatmap(filter = {}, data = []) {
@@ -197,8 +208,9 @@ function updateHeatmap(filter = {}, data = []) {
         d => d.race_ethnicity_combined
     );
 
-    const ageGroups = Array.from(new Set(data.map(d => d.age_group)));
-    const races = Array.from(new Set(data.map(d => d.race_ethnicity_combined)));
+    const ageGroups = Array.from(new Set(data.map(d => d.age_group))).sort(d3.ascending);
+    const races = Array.from(new Set(data.map(d => d.race_ethnicity_combined))).sort(d3.ascending);
+    
 
     // Heatmap dimensions and scales
     const margin = { top: 30, right: 100, bottom: 100, left: 300 };
